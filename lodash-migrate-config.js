@@ -1,4 +1,11 @@
 const oneToOneRelation = {
+  camelCase: true,
+  flow: true,
+  toString: true,
+  toNumber: true,
+  values: true,
+  keys: true,
+  first: true,
   clone: true,
   cloneDeep: true,
   compact: true,
