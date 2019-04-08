@@ -1,4 +1,6 @@
-import { concat, difference, filter, flow, uniq } from 'lodash/fp';
+import {
+  concat, difference, filter, flow, uniq,
+} from 'lodash/fp';
 
 import {
   customArgumentOrder,
@@ -13,36 +15,32 @@ import {
   fixedArityOne,
 } from './lodash-migrate-config';
 
-const rotate = arr => {
+const rotate = (arr) => {
   const first = arr.shift();
   arr.push(first);
   return arr;
 };
 
-const rotateLeft = arr => {
-  return [arr[arr.length - 1], ...arr.splice(0, arr.length - 1)];
-};
 
 const findImportSpecifier = (j, node) => {
   const arr = [];
-  node.find(j.ImportSpecifier).forEach(node => arr.push(node.value.imported.name));
+  node.find(j.ImportSpecifier).forEach(n => arr.push(n.value.imported.name));
   return arr;
 };
 
-const findImport = (j, root, packageName) => {
-  return root.find(j.ImportDeclaration, node => node.source.value === packageName);
-};
+const findImport = (j, root, packageName) => root.find(j.ImportDeclaration,
+  node => node.source.value === packageName);
 
 const validTransformMethod = (methodName, args) => {
   if (customArgumentOrder[methodName]) {
     // Not implemented
     return { valid: false, reason: 'does_not_support' };
-  } else if (oneToOneRelation[methodName]) {
+  } if (oneToOneRelation[methodName]) {
     return { valid: true };
-  } else if (fixedArityOne[methodName]) {
+  } if (fixedArityOne[methodName]) {
     const valid = args.length === 1;
     return { valid };
-  } else if (iterateeCappedToOneArgument[methodName]) {
+  } if (iterateeCappedToOneArgument[methodName]) {
     const iteratee = args[1];
     const isDataType = dataTypes[iteratee.name];
     const isLiteral = ['ArrayExpression', 'Literal', 'ObjectExpression'].indexOf(iteratee.type) > -1;
@@ -50,24 +48,24 @@ const validTransformMethod = (methodName, args) => {
     const isFunctionWithOneArg = isFunction && iteratee.params.length === 1;
     const valid = isDataType || isLiteral || isFunctionWithOneArg;
     return { valid, method: 'reverse' };
-  } else if (iterateeCappedToTwoArguments[methodName]) {
+  } if (iterateeCappedToTwoArguments[methodName]) {
     const iteratee = args[1];
     const isFunction = ['ArrowFunctionExpression', 'FunctionExpression'].indexOf(iteratee.type) > -1;
     const isFunctionWithTwoArgs = isFunction && iteratee.params.length === 2;
     const arityOfThree = args.length === 3;
     const valid = isFunctionWithTwoArgs && arityOfThree;
     return { valid, method: 'rotate' };
-  } else if (methodName === 'get' && args.length === 3) {
+  } if (methodName === 'get' && args.length === 3) {
     return { valid: true, method: 'change' };
-  } else if (fixedArityTwo[methodName]) {
+  } if (fixedArityTwo[methodName]) {
     const valid = args.length === 2;
     const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
     return { valid, method };
-  } else if (fixedArityThree[methodName]) {
+  } if (fixedArityThree[methodName]) {
     const valid = args.length === 3;
     const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
     return { valid, method };
-  } else if (fixedArityFour[methodName]) {
+  } if (fixedArityFour[methodName]) {
     const valid = args.length === 4;
     const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
     return { valid, method };
@@ -77,9 +75,7 @@ const validTransformMethod = (methodName, args) => {
 };
 
 const createImportNode = (j, methods, packageName) => {
-  const specifiers = methods.map(name => {
-    return j.importSpecifier(j.identifier(name));
-  });
+  const specifiers = methods.map(name => j.importSpecifier(j.identifier(name)));
   return j.importDeclaration(specifiers, j.literal(packageName));
 };
 
@@ -91,14 +87,14 @@ export default (file, api) => {
   const lodashItems = findImportSpecifier(j, lodashImport);
   // eslint-disable-next-line
   let methodsValidate = {};
-  lodashItems.forEach(methodName => {
+  lodashItems.forEach((methodName) => {
     root
       .find(j.CallExpression, {
         callee: {
           name: methodName,
         },
       })
-      .forEach(ex => {
+      .forEach((ex) => {
         const args = ex.node.arguments;
         const validate = validTransformMethod(methodName, args);
         if (!validate.valid) {
@@ -110,14 +106,14 @@ export default (file, api) => {
   });
   const canMigrateLodashItems = filter(item => methodsValidate[item] !== false, lodashItems);
   const changeItems = [];
-  canMigrateLodashItems.forEach(methodName => {
+  canMigrateLodashItems.forEach((methodName) => {
     root
       .find(j.CallExpression, {
         callee: {
           name: methodName,
         },
       })
-      .replaceWith(ex => {
+      .replaceWith((ex) => {
         const args = ex.node.arguments;
         const validate = validTransformMethod(methodName, args);
         // eslint-disable-next-line
