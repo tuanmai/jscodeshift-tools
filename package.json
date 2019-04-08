@@ -1,0 +1,8 @@
+{
+  "name": "lodash-mirate",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:tuanmai/jscodeshift-lodash-to-lodash-fp.git",
+  "author": "Tuan Mai <perhuman@gmail.com>",
+  "license": "MIT"
+}
