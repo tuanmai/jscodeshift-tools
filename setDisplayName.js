@@ -68,6 +68,9 @@ export default (file, api) => {
     if (args[0].type === 'CallExpression' && args[0].callee.name === 'setStatic') {
       return j.callExpression(j.identifier('compose'), args);
     }
+    if (args[0].type === 'CallExpression' && args[0].callee.name === 'setDisplayName') {
+      return j.callExpression(j.identifier('compose'), args);
+    }
     const newArgs = [j.callExpression(j.identifier('setDisplayName'), [j.literal(componentName)]), ...args];
     addImportSetDisplayName(j, root);
     return j.callExpression(j.identifier('compose'), newArgs);
