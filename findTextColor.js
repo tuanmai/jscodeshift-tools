@@ -13,7 +13,7 @@ const isHasStyleProps = (j, node) => {
   return styleProp.length >= 1;
 };
 
-const fileColorValueInProps = props => {
+const findColorValueInProps = props => {
   const color = flow(flatten, find(prop => prop.key.name === "color"), prop => {
     if (!prop) return undefined;
     if (prop.value.type === "Literal") return prop.value.value;
@@ -23,29 +23,13 @@ const fileColorValueInProps = props => {
   return color;
 };
 
-const inlineStyleHasColor = (j, node) => {
-  const inlineStyle = node.find(j.ObjectExpression, node =>
-    find(prop => prop.key.name === "color", node.properties)
-  );
-  if (inlineStyle.length < 1) return undefined;
-  const color = flow(map(node => node.properties), fileColorValueInProps)(
-    inlineStyle.nodes()
-  );
-  return color;
-};
-
-const objectStyleHasColor = (j, root, node) => {
+const findColorValueInStyleObject = (styleObject, stylePropName) => {
   let color = undefined;
-  const objectStyle = findHasStylePropNode(j, node).find(j.MemberExpression);
-  if (objectStyle.length < 1) return undefined;
-  const styleObjectName = objectStyle.nodes()[0].object.name;
-  const stylePropName = objectStyle.nodes()[0].property.name;
-  const styleObject = root.findVariableDeclarators(styleObjectName).nodes()[0];
   if (styleObject.init.type === "ObjectExpression") {
     color = flow(
       find(node => node.key.name === stylePropName),
       get("value.properties"),
-      fileColorValueInProps
+      findColorValueInProps
     )(styleObject.init.properties);
   }
 
@@ -55,31 +39,61 @@ const objectStyleHasColor = (j, root, node) => {
       get("properties"),
       find(node => node.key.name === stylePropName),
       get("value.properties"),
-      fileColorValueInProps
+      findColorValueInProps
     )(styleObject.init.arguments);
   }
   return color;
-  // const color = flow(
-  //   map(node => node.properties),
-  //   flatten,
-  //   find(prop => prop.key.name === "color"),
-  //   prop => {
-  //     if (prop.value.type === "Literal") return prop.value.value;
-  //     if (prop.value.type === "Identifier") return prop.value.name;
-  //     return prop.value.type;
-  //   }
-  // )(inlineStyle.nodes());
-  // return color;
+};
+
+const inlineStyleHasColor = (j, node) => {
+  const inlineStyle = node.find(j.ObjectExpression, node =>
+    find(prop => prop.key.name === "color", node.properties)
+  );
+  if (inlineStyle.length < 1) return undefined;
+  const color = flow(map(node => node.properties), findColorValueInProps)(
+    inlineStyle.nodes()
+  );
+  return color;
+};
+
+const arrayStyleHasColor = (j, root, node) => {
+  const objectStyle = findHasStylePropNode(j, node)
+    .find(
+      j.JSXExpressionContainer,
+      node => node.expression.type === "ArrayExpression"
+    )
+    .find(j.MemberExpression);
+  if (objectStyle.length < 1) return undefined;
+  const styleObjectName = objectStyle.nodes()[0].object.name;
+  const stylePropName = objectStyle.nodes()[0].property.name;
+  const styleObject = root.findVariableDeclarators(styleObjectName).nodes()[0];
+  return undefined;
+  // return findColorValueInStyleObject(styleObject);
+};
+
+const objectStyleHasColor = (j, root, node) => {
+  const objectStyle = findHasStylePropNode(j, node)
+    .find(
+      j.JSXExpressionContainer,
+      node => node.expression.type === "MemberExpression"
+    )
+    .find(j.MemberExpression);
+  if (objectStyle.length < 1) return undefined;
+  const styleObjectName = objectStyle.nodes()[0].object.name;
+  const stylePropName = objectStyle.nodes()[0].property.name;
+  const styleObject = root.findVariableDeclarators(styleObjectName).nodes()[0];
+  return findColorValueInStyleObject(styleObject, stylePropName);
 };
 
 const findColorStyle = (j, root, node) => {
   if (!isHasStyleProps(j, node)) return "fff";
   const inlineColor = inlineStyleHasColor(j, node);
   const objectColor = objectStyleHasColor(j, root, node);
+  const arrayColor = arrayStyleHasColor(j, root, node);
   if (inlineColor || objectColor) {
     return inlineColor || objectColor;
   }
-  return "fff";
+  return undefined;
 };
 
 export default (file, api) => {
