@@ -1,4 +1,4 @@
-import { concat } from "lodash/fp";
+import { concat, endsWith } from "lodash/fp";
 
 const findImportSpecifier = (j, node) => {
   const arr = [];
@@ -42,29 +42,9 @@ const createImportDefaultNode = (
   return j.importDeclaration(specifiers, j.literal(packageName));
 };
 
-// const createImportDefaultNode = (
-//   j,
-//   importDefaultName,
-//   methods,
-//   packageName
-// ) => {
-//   let specifiers = [];
-//   if (importDefaultName) {
-//     const importDefaultSpecifier = j.ImportDefaultSpecifier(
-//       j.identifier(importDefaultName)
-//     );
-//     specifiers = [importDefaultName];
-//   }
-//   const methodSpecifiers = methods.map(name =>
-//     j.importSpecifier(j.identifier(name))
-//   );
-//   specifiers = [...specifiers, ...methodSpecifiers];
-//   return j.importDeclaration(specifiers, j.literal(packageName));
-// };
-
 const findRelativeImport = (j, root, packageName) => {
   return root.find(j.ImportDeclaration, node =>
-    node.source.value.includes(packageName)
+    endsWith(packageName, node.source.value)
   );
 };
 

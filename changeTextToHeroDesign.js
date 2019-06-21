@@ -1,15 +1,25 @@
-import {
-  createImportDefaultNode,
-  findImportDefaultSpecifier,
-  findRelativeImport
-} from "./importUtils";
+import { findImportDefaultSpecifier, findRelativeImport } from "./importUtils";
+
+const createImportTextNode = (j, defaultImportName, localName, packageName) => {
+  let specifiers = [];
+  if (defaultImportName !== localName) {
+    specifiers = [
+      j.importSpecifier(
+        j.identifier(defaultImportName),
+        j.identifier(localName)
+      )
+    ];
+  }
+  specifiers = [j.importSpecifier(j.identifier(defaultImportName))];
+  return j.importDeclaration(specifiers, j.literal(packageName));
+};
 
 const migrateText = (j, root, relativePath, newPath) => {
   const commonTextImport = findRelativeImport(j, root, relativePath);
-  const defaultImportName = findImportDefaultSpecifier(j, commonTextImport);
   if (commonTextImport.length < 1) return false;
+  const defaultImportName = findImportDefaultSpecifier(j, commonTextImport);
   commonTextImport.replaceWith(() => {
-    return createImportDefaultNode(j, defaultImportName, [], newPath);
+    return createImportTextNode(j, defaultImportName, "Text", newPath);
   });
   return true;
 };
