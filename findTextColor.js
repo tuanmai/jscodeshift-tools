@@ -15,6 +15,7 @@ const isHasStyleProps = (j, node) => {
 
 const fileColorValueInProps = props => {
   const color = flow(flatten, find(prop => prop.key.name === "color"), prop => {
+    if (!prop) return undefined;
     if (prop.value.type === "Literal") return prop.value.value;
     if (prop.value.type === "Identifier") return prop.value.name;
     return prop.value.type;
@@ -43,11 +44,10 @@ const objectStyleHasColor = (j, root, node) => {
   if (styleObject.init.type === "ObjectExpression") {
     color = flow(
       find(node => node.key.name === stylePropName),
-      map(node => node.value.properties),
+      get("value.properties"),
       fileColorValueInProps
     )(styleObject.init.properties);
   }
-  console.log(stylePropName);
 
   if (styleObject.init.type === "CallExpression") {
     color = flow(
