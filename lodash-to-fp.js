@@ -1,6 +1,4 @@
-import {
-  concat, difference, filter, flow, uniq,
-} from 'lodash/fp';
+import { concat, difference, filter, flow, uniq } from "lodash/fp";
 
 import {
   customArgumentOrder,
@@ -12,66 +10,72 @@ import {
   iterateeCappedToTwoArguments,
   oneToOneRelation,
   shouldNotRotate,
-  fixedArityOne,
-} from './lodash-migrate-config';
+  fixedArityOne
+} from "./lodash-migrate-config";
+import { findImport, findImportSpecifier } from "./importUtils";
 
-const rotate = (arr) => {
+const rotate = arr => {
   const first = arr.shift();
   arr.push(first);
   return arr;
 };
 
-
-const findImportSpecifier = (j, node) => {
-  const arr = [];
-  node.find(j.ImportSpecifier).forEach(n => arr.push(n.value.imported.name));
-  return arr;
-};
-
-const findImport = (j, root, packageName) => root.find(j.ImportDeclaration,
-  node => node.source.value === packageName);
-
 const validTransformMethod = (methodName, args) => {
   if (customArgumentOrder[methodName]) {
     // Not implemented
-    return { valid: false, reason: 'does_not_support' };
-  } if (oneToOneRelation[methodName]) {
+    return { valid: false, reason: "does_not_support" };
+  }
+  if (oneToOneRelation[methodName]) {
     return { valid: true };
-  } if (fixedArityOne[methodName]) {
+  }
+  if (fixedArityOne[methodName]) {
     const valid = args.length === 1;
     return { valid };
-  } if (iterateeCappedToOneArgument[methodName]) {
+  }
+  if (iterateeCappedToOneArgument[methodName]) {
     const iteratee = args[1];
     const isDataType = dataTypes[iteratee.name];
-    const isLiteral = ['ArrayExpression', 'Literal', 'ObjectExpression'].indexOf(iteratee.type) > -1;
-    const isFunction = ['ArrowFunctionExpression', 'FunctionExpression'].indexOf(iteratee.type) > -1;
+    const isLiteral =
+      ["ArrayExpression", "Literal", "ObjectExpression"].indexOf(
+        iteratee.type
+      ) > -1;
+    const isFunction =
+      ["ArrowFunctionExpression", "FunctionExpression"].indexOf(iteratee.type) >
+      -1;
     const isFunctionWithOneArg = isFunction && iteratee.params.length === 1;
     const valid = isDataType || isLiteral || isFunctionWithOneArg;
-    return { valid, method: 'reverse' };
-  } if (iterateeCappedToTwoArguments[methodName]) {
+    return { valid, method: "reverse" };
+  }
+  if (iterateeCappedToTwoArguments[methodName]) {
     const iteratee = args[1];
-    const isFunction = ['ArrowFunctionExpression', 'FunctionExpression'].indexOf(iteratee.type) > -1;
+    const isFunction =
+      ["ArrowFunctionExpression", "FunctionExpression"].indexOf(iteratee.type) >
+      -1;
     const isFunctionWithTwoArgs = isFunction && iteratee.params.length === 2;
     const arityOfThree = args.length === 3;
     const valid = isFunctionWithTwoArgs && arityOfThree;
-    return { valid, method: 'rotate' };
-  } if (methodName === 'get' && args.length === 3) {
-    return { valid: true, method: 'change' };
-  } if (fixedArityTwo[methodName]) {
+    return { valid, method: "rotate" };
+  }
+  if (methodName === "get" && args.length === 3) {
+    return { valid: true, method: "change" };
+  }
+  if (fixedArityTwo[methodName]) {
     const valid = args.length === 2;
-    const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
+    const method = !shouldNotRotate[methodName] ? "rotate" : "none";
     return { valid, method };
-  } if (fixedArityThree[methodName]) {
+  }
+  if (fixedArityThree[methodName]) {
     const valid = args.length === 3;
-    const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
+    const method = !shouldNotRotate[methodName] ? "rotate" : "none";
     return { valid, method };
-  } if (fixedArityFour[methodName]) {
+  }
+  if (fixedArityFour[methodName]) {
     const valid = args.length === 4;
-    const method = !shouldNotRotate[methodName] ? 'rotate' : 'none';
+    const method = !shouldNotRotate[methodName] ? "rotate" : "none";
     return { valid, method };
   }
 
-  return { valid: false, reason: 'exception' };
+  return { valid: false, reason: "exception" };
 };
 
 const createImportNode = (j, methods, packageName) => {
@@ -82,19 +86,19 @@ const createImportNode = (j, methods, packageName) => {
 export default (file, api) => {
   const j = api.jscodeshift;
   const root = j(file.source);
-  const lodashImport = findImport(j, root, 'lodash');
+  const lodashImport = findImport(j, root, "lodash");
   if (lodashImport.length < 1) return file.source;
   const lodashItems = findImportSpecifier(j, lodashImport);
   // eslint-disable-next-line
   let methodsValidate = {};
-  lodashItems.forEach((methodName) => {
+  lodashItems.forEach(methodName => {
     root
       .find(j.CallExpression, {
         callee: {
-          name: methodName,
-        },
+          name: methodName
+        }
       })
-      .forEach((ex) => {
+      .forEach(ex => {
         const args = ex.node.arguments;
         const validate = validTransformMethod(methodName, args);
         if (!validate.valid) {
@@ -104,32 +108,35 @@ export default (file, api) => {
         }
       });
   });
-  const canMigrateLodashItems = filter(item => methodsValidate[item] !== false, lodashItems);
+  const canMigrateLodashItems = filter(
+    item => methodsValidate[item] !== false,
+    lodashItems
+  );
   const changeItems = [];
-  canMigrateLodashItems.forEach((methodName) => {
+  canMigrateLodashItems.forEach(methodName => {
     root
       .find(j.CallExpression, {
         callee: {
-          name: methodName,
-        },
+          name: methodName
+        }
       })
-      .replaceWith((ex) => {
+      .replaceWith(ex => {
         const args = ex.node.arguments;
         const validate = validTransformMethod(methodName, args);
         // eslint-disable-next-line
         let newMethod = methodName;
         // eslint-disable-next-line
         let newArgs = args;
-        if (validate.method === 'reverse') {
+        if (validate.method === "reverse") {
           newArgs = args.reverse();
         }
-        if (validate.method === 'rotate') {
+        if (validate.method === "rotate") {
           newArgs = rotate(args);
         }
-        if (validate.method === 'change') {
-          if (methodName === 'get') {
-            newMethod = 'getOr';
-            changeItems.push('getOr');
+        if (validate.method === "change") {
+          if (methodName === "get") {
+            newMethod = "getOr";
+            changeItems.push("getOr");
             newArgs = args.reverse();
           }
         }
@@ -143,30 +150,27 @@ export default (file, api) => {
   } else {
     lodashImport.replaceWith(() => {
       const newMethods = difference(lodashItems, canMigrateLodashItems);
-      return createImportNode(j, newMethods, 'lodash');
+      return createImportNode(j, newMethods, "lodash");
     });
   }
   // Add import lodash fp
   if (canMigrateLodashItems.length > 0) {
-    const lodashFpImport = findImport(j, root, 'lodash/fp');
+    const lodashFpImport = findImport(j, root, "lodash/fp");
     if (lodashFpImport.length >= 1) {
       const lodashFpItems = findImportSpecifier(j, lodashFpImport);
       lodashFpImport.replaceWith(() => {
         const newMethods = flow(
           concat(canMigrateLodashItems),
           concat(changeItems),
-          uniq,
+          uniq
         )(lodashFpItems);
-        return createImportNode(j, newMethods, 'lodash/fp');
+        return createImportNode(j, newMethods, "lodash/fp");
       });
     } else {
-      const newMethods = flow(
-        concat(changeItems),
-        uniq,
-      )(canMigrateLodashItems);
-      lodashImport.insertAfter(createImportNode(j, newMethods, 'lodash/fp'));
+      const newMethods = flow(concat(changeItems), uniq)(canMigrateLodashItems);
+      lodashImport.insertAfter(createImportNode(j, newMethods, "lodash/fp"));
     }
   }
 
-  return root.toSource({ quote: 'single' });
+  return root.toSource({ quote: "single" });
 };

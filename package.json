@@ -6,11 +6,12 @@
   "author": "Tuan Mai <perhuman@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.16.0"
   },
   "dependencies": {
-    "lodash": "^4.17.11"
+    "flow-parser": "^0.97.0",
+    "lodash": "^4.17.11",
+    "recast": "^0.17.5"
   }
 }
