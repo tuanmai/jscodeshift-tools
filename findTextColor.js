@@ -23,12 +23,19 @@ const isHasStyleProps = (j, node) => {
   return styleProp.length >= 1;
 };
 
+const getValue = value => {
+  if (value.type === "Literal") return value.value;
+  if (value.type === "Identifier") return value.name;
+  if (value.type === "ConditionalExpression") {
+    return [getValue(value.consequent), getValue(value.alternate)];
+  }
+  return value.type;
+};
+
 const findColorValueInProps = props => {
   const color = flow(flatten, find(prop => prop.key.name === "color"), prop => {
     if (!prop) return undefined;
-    if (prop.value.type === "Literal") return prop.value.value;
-    if (prop.value.type === "Identifier") return prop.value.name;
-    return prop.value.type;
+    return getValue(prop.value);
   })(props);
   return color;
 };
