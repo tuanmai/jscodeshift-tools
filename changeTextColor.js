@@ -74,6 +74,8 @@ const removeColorValueInStyleObject = (j, styleObject, stylePropName) => {
 
 const colorToPropMap = {
   white: "primary",
+  WHITE: "primary",
+  "#ffffff": "primary",
   PRIMARY_LIGHT_GREY: "secondary",
   "#747474": "secondary"
 };
@@ -120,7 +122,13 @@ const arrayStyleHasColor = (j, root, node) => {
       const styleObject = root
         .findVariableDeclarators(styleObjectName)
         .nodes()[0];
-      return findColorValueInStyleObject(styleObject, stylePropName);
+      const styleNode = root.findVariableDeclarators(styleObjectName);
+      const color = findColorValueInStyleObject(styleObject, stylePropName);
+      const colorProp = colorToPropMap[color];
+      if (colorProp) {
+        removeColorValueInStyleObject(j, styleNode, stylePropName);
+        addColorProp(j, node, colorProp);
+      }
     }),
     compact,
     uniq
@@ -154,7 +162,7 @@ const replaceColorByProp = (j, root, node) => {
   if (!isHasStyleProps(j, node)) return undefined;
   const inlineColor = inlineStyleHasColor(j, node);
   const objectColor = objectStyleHasColor(j, root, node);
-  // const arrayColor = arrayStyleHasColor(j, root, node);
+  const arrayColor = arrayStyleHasColor(j, root, node);
   // if (inlineColor || objectColor || arrayColor) {
   //   return inlineColor || objectColor || arrayColor;
   // }
