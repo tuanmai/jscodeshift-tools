@@ -7,6 +7,7 @@ import {
   size,
   get,
   compact,
+  includes,
   uniq
 } from "lodash/fp";
 
@@ -61,6 +62,34 @@ const findColorValueInStyleObject = (styleObject, stylePropName) => {
   return color;
 };
 
+const removeColorValueInStyleObject = (j, styleObject, stylePropName) => {
+  const supportedType = ["ObjectExpression", "CallExpression"];
+  if (includes(styleObject.nodes()[0].init.type, supportedType)) {
+    const textStyleObject = styleObject
+      .find(j.Property, node => node.key.name === stylePropName)
+      .find(j.Property, node => node.key.name === "color")
+      .remove();
+  }
+};
+
+const colorToPropMap = {
+  white: "primary",
+  PRIMARY_LIGHT_GREY: "secondary",
+  "#747474": "secondary"
+};
+
+const removeColorProps = (j, node) => {
+  node.find(j.Property, node => node.key.name === "color").remove();
+};
+
+const addColorProp = (j, node, prop) => {
+  node
+    .find(j.JSXAttribute, node => node.name.name === "style")
+    .insertAfter(() => {
+      return j.identifier(prop);
+    });
+};
+
 const inlineStyleHasColor = (j, node) => {
   const inlineStyle = node.find(j.ObjectExpression, node =>
     find(prop => prop.key.name === "color", node.properties)
@@ -69,7 +98,11 @@ const inlineStyleHasColor = (j, node) => {
   const color = flow(map(node => node.properties), findColorValueInProps)(
     inlineStyle.nodes()
   );
-  return color;
+  const colorProp = colorToPropMap[color];
+  if (colorProp) {
+    removeColorProps(j, inlineStyle);
+    addColorProp(j, node, colorProp);
+  }
 };
 
 const arrayStyleHasColor = (j, root, node) => {
@@ -108,17 +141,23 @@ const objectStyleHasColor = (j, root, node) => {
   const styleObjectName = objectStyle.nodes()[0].object.name;
   const stylePropName = objectStyle.nodes()[0].property.name;
   const styleObject = root.findVariableDeclarators(styleObjectName).nodes()[0];
-  return findColorValueInStyleObject(styleObject, stylePropName);
+  const styleNode = root.findVariableDeclarators(styleObjectName);
+  const color = findColorValueInStyleObject(styleObject, stylePropName);
+  const colorProp = colorToPropMap[color];
+  if (colorProp) {
+    removeColorValueInStyleObject(j, styleNode, stylePropName);
+    addColorProp(j, node, colorProp);
+  }
 };
 
-const findColorStyle = (j, root, node) => {
+const replaceColorByProp = (j, root, node) => {
   if (!isHasStyleProps(j, node)) return undefined;
   const inlineColor = inlineStyleHasColor(j, node);
   const objectColor = objectStyleHasColor(j, root, node);
-  const arrayColor = arrayStyleHasColor(j, root, node);
-  if (inlineColor || objectColor || arrayColor) {
-    return inlineColor || objectColor || arrayColor;
-  }
+  // const arrayColor = arrayStyleHasColor(j, root, node);
+  // if (inlineColor || objectColor || arrayColor) {
+  //   return inlineColor || objectColor || arrayColor;
+  // }
   return undefined;
 };
 
@@ -132,14 +171,14 @@ export default (file, api) => {
 
   for (let i = 0; i < textComponents.length; i++) {
     const textNode = textComponents.at(i);
-    const foundColorStyle = findColorStyle(j, root, textNode);
-    if (foundColorStyle !== undefined) {
-      if (Array.isArray(foundColorStyle)) {
-        map(color => console.log("Color: ", color), foundColorStyle);
-      } else {
-        console.log("Color: ", foundColorStyle);
-      }
-    }
+    const foundColorStyle = replaceColorByProp(j, root, textNode);
+    // if (foundColorStyle !== undefined) {
+    //   if (Array.isArray(foundColorStyle)) {
+    //     map(color => console.log("Color: ", color), foundColorStyle);
+    //   } else {
+    //     console.log("Color: ", foundColorStyle);
+    //   }
+    // }
   }
 
   return root.toSource({ quote: "single" });
