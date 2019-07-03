@@ -240,7 +240,7 @@ export default (file, api) => {
   }
   for (let i = 0; i < textComponents.length; i++) {
     const textNode = textComponents.at(i);
-    addFontSizeProp(j, root, textNode, true);
+    removeFontSizeInStyle(j, root, textNode, true);
   }
 
   return root.toSource({ quote: "single" });
