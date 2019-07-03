@@ -77,7 +77,9 @@ const colorToPropMap = {
   WHITE: "primary",
   "#ffffff": "primary",
   PRIMARY_LIGHT_GREY: "secondary",
-  "#747474": "secondary"
+  "#747474": "secondary",
+  textColor: "secondary",
+  TEXT_COLOR: "secondary"
 };
 
 const removeColorProps = (j, node) => {
