@@ -34,10 +34,14 @@ const getValue = value => {
 };
 
 const findColorValueInProps = props => {
-  const color = flow(flatten, find(prop => prop.key.name === "color"), prop => {
-    if (!prop) return undefined;
-    return getValue(prop.value);
-  })(props);
+  const color = flow(
+    flatten,
+    find(prop => prop.key.name === "color"),
+    prop => {
+      if (!prop) return undefined;
+      return getValue(prop.value);
+    }
+  )(props);
   return color;
 };
 
@@ -94,22 +98,25 @@ const addColorProp = (j, node, prop) => {
     });
 };
 
-const inlineStyleHasColor = (j, node) => {
+const inlineStyleHasColor = (j, node, isDelete) => {
   const inlineStyle = node.find(j.ObjectExpression, node =>
     find(prop => prop.key.name === "color", node.properties)
   );
   if (inlineStyle.length < 1) return undefined;
-  const color = flow(map(node => node.properties), findColorValueInProps)(
-    inlineStyle.nodes()
-  );
+  const color = flow(
+    map(node => node.properties),
+    findColorValueInProps
+  )(inlineStyle.nodes());
   const colorProp = colorToPropMap[color];
   if (colorProp) {
-    removeColorProps(j, inlineStyle);
     addColorProp(j, node, colorProp);
+    if (isDelete) {
+      removeColorProps(j, inlineStyle);
+    }
   }
 };
 
-const arrayStyleHasColor = (j, root, node) => {
+const arrayStyleHasColor = (j, root, node, isDelete) => {
   const arrayStyle = findHasStylePropNode(j, node)
     .find(
       j.JSXExpressionContainer,
@@ -128,8 +135,10 @@ const arrayStyleHasColor = (j, root, node) => {
       const color = findColorValueInStyleObject(styleObject, stylePropName);
       const colorProp = colorToPropMap[color];
       if (colorProp) {
-        removeColorValueInStyleObject(j, styleNode, stylePropName);
         addColorProp(j, node, colorProp);
+        if (isDelete) {
+          removeColorValueInStyleObject(j, styleNode, stylePropName);
+        }
       }
     }),
     compact,
@@ -140,7 +149,7 @@ const arrayStyleHasColor = (j, root, node) => {
   return colors;
 };
 
-const objectStyleHasColor = (j, root, node) => {
+const objectStyleHasColor = (j, root, node, isDelete) => {
   const objectStyle = findHasStylePropNode(j, node)
     .find(
       j.JSXExpressionContainer,
@@ -155,19 +164,18 @@ const objectStyleHasColor = (j, root, node) => {
   const color = findColorValueInStyleObject(styleObject, stylePropName);
   const colorProp = colorToPropMap[color];
   if (colorProp) {
-    removeColorValueInStyleObject(j, styleNode, stylePropName);
     addColorProp(j, node, colorProp);
+    if (isDelete) {
+      removeColorValueInStyleObject(j, styleNode, stylePropName);
+    }
   }
 };
 
-const replaceColorByProp = (j, root, node) => {
+const replaceColorByProp = (j, root, node, isDelete = false) => {
   if (!isHasStyleProps(j, node)) return undefined;
-  const inlineColor = inlineStyleHasColor(j, node);
-  const objectColor = objectStyleHasColor(j, root, node);
-  const arrayColor = arrayStyleHasColor(j, root, node);
-  // if (inlineColor || objectColor || arrayColor) {
-  //   return inlineColor || objectColor || arrayColor;
-  // }
+  const inlineColor = inlineStyleHasColor(j, node, isDelete);
+  const objectColor = objectStyleHasColor(j, root, node, isDelete);
+  const arrayColor = arrayStyleHasColor(j, root, node, isDelete);
   return undefined;
 };
 
