@@ -109,9 +109,10 @@ const inlineStyleHasColor = (j, node, isDelete) => {
   )(inlineStyle.nodes());
   const colorProp = colorToPropMap[color];
   if (colorProp) {
-    addColorProp(j, node, colorProp);
     if (isDelete) {
       removeColorProps(j, inlineStyle);
+    } else {
+      addColorProp(j, node, colorProp);
     }
   }
 };
@@ -135,9 +136,10 @@ const arrayStyleHasColor = (j, root, node, isDelete) => {
       const color = findColorValueInStyleObject(styleObject, stylePropName);
       const colorProp = colorToPropMap[color];
       if (colorProp) {
-        addColorProp(j, node, colorProp);
         if (isDelete) {
           removeColorValueInStyleObject(j, styleNode, stylePropName);
+        } else {
+          addColorProp(j, node, colorProp);
         }
       }
     }),
@@ -164,9 +166,10 @@ const objectStyleHasColor = (j, root, node, isDelete) => {
   const color = findColorValueInStyleObject(styleObject, stylePropName);
   const colorProp = colorToPropMap[color];
   if (colorProp) {
-    addColorProp(j, node, colorProp);
     if (isDelete) {
       removeColorValueInStyleObject(j, styleNode, stylePropName);
+    } else {
+      addColorProp(j, node, colorProp);
     }
   }
 };
@@ -190,13 +193,10 @@ export default (file, api) => {
   for (let i = 0; i < textComponents.length; i++) {
     const textNode = textComponents.at(i);
     const foundColorStyle = replaceColorByProp(j, root, textNode);
-    // if (foundColorStyle !== undefined) {
-    //   if (Array.isArray(foundColorStyle)) {
-    //     map(color => console.log("Color: ", color), foundColorStyle);
-    //   } else {
-    //     console.log("Color: ", foundColorStyle);
-    //   }
-    // }
+  }
+  for (let i = 0; i < textComponents.length; i++) {
+    const textNode = textComponents.at(i);
+    replaceColorByProp(j, root, textNode, true);
   }
 
   return root.toSource({ quote: "single" });
