@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "flow-parser": "^0.97.0",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.21",
     "recast": "^0.17.5"
   }
 }
